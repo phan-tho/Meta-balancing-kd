@@ -183,7 +183,7 @@ class CIFAR100(CIFAR10):
             self.labels = entry['fine_labels']
             self.data = self.data.reshape((10000, 3, 32, 32)).transpose((0, 2, 3, 1))  # HWC
 
-def build_dataset(args):
+def build_dataset(args, get_img_num_per_cls=False):
     normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
                                      std=[0.2023, 0.1994, 0.2010])
     train_transform = transforms.Compose([
@@ -210,7 +210,7 @@ def build_dataset(args):
         test_data = CIFAR100(root='../data', train=False, transform=test_transform, download=True)
 
     if args.imb_factor > 1:
-        train_data = make_imbalanced_dataset(train_data, args)
+        train_data, img_num_per_cls = make_imbalanced_dataset(train_data, args)
 
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size, shuffle=True,
@@ -220,6 +220,8 @@ def build_dataset(args):
         num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False,
                                               num_workers=args.prefetch, pin_memory=True)
+    if get_img_num_per_cls:
+        return train_loader, valid_loader, test_loader, img_num_per_cls
     return train_loader, valid_loader, test_loader
 
 def make_imbalanced_dataset(dataset, args):
@@ -242,4 +244,4 @@ def make_imbalanced_dataset(dataset, args):
         indices_list.append(sampled_indices)
 
     all_indices = np.concatenate(indices_list)
-    return Subset(dataset, all_indices)
+    return Subset(dataset, all_indices), img_num_per_cls
